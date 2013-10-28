@@ -28,7 +28,8 @@ public class FindSequence {
 	
 	public void initSearchedPatterns() {
 		
-		String [] permname = new String[]{"ident","r_adj","l_adj","oposite","cicle"};
+		//String [] permname = new String[]{"ident","r_adj","l_adj","oposite","cicle"};
+		String [] permname = new String[]{"I","DR","DL","X","C","C2"};
 		byte [][] perm = {
 			// 1/12
 			/* byte [] ident =*/ new    byte[] {    0,    1,     2,    3,     4,     5,     6,     7},
@@ -39,9 +40,11 @@ public class FindSequence {
 			// 1/12
 			/* byte [] oposite =*/ new    byte[] {    2,    3,     0,    1,     4,     5,     6,     7},
 			// 1/12 * 4 * 2 = 8/12
-			/* byte [] cicle =*/ new    byte[] {    0,    3,     1,    2,     4,     5,     6,     7}
+			/* byte [] cicle =*/ new    byte[] {    0,    3,     1,    2,     4,     5,     6,     7},
+			/* byte [] cicle =*/ new    byte[] {    0,    2,     3,    1,     4,     5,     6,     7}
 		};
-		String [] flipname = new String[]{"noflip","allflip","flip_01","flip_12","flip_23","flip_30","vert_flip","hori_flip"};
+		//String [] flipname = new String[]{"noflip","allflip","flip_01","flip_12","flip_23","flip_30","vert_flip","hori_flip"};
+		String [] flipname = new String[]{"O","A","F_01","F_12","F_23","F_30","H_VERT","H_HORI"};
 		boolean [][] flip = {
 		// 1/8
 		/*boolean [] noflip =*/  new boolean[] { false, false, false, false, false, false, false, false},
@@ -58,66 +61,100 @@ public class FindSequence {
 		/*boolean [] hori_flip =*/  new boolean[] { false, true, false, true, false, false, false, false}
 		};
 		StructuredPermL3 p;
-		for (int i=0; i<5;++i) {
-			for (int j=0; j<8;++j) {
-				p = new StructuredPermL3(perm[i],flip[j], 0,permname[i]+";"+flipname[j]);
+		for (int i=0; i<perm.length;++i) {
+			for (int j=0; j<flip.length;++j) {
+				p = new StructuredPermL3(perm[i],flip[j], 0,"",permname[i]+";"+flipname[j]);
 				finalPatterns.add(p);
 			}
 		}
-
+		/* FIX NAMES */
+		p1_loop: for (StructuredPermL3 p1:finalPatterns) {
+			for (StructuredPermL3 p2:finalPatterns) {
+				if (match(p1.actInverse(State.getInitialState()),p2.act(State.getInitialState()))) {
+					p1.name = p2.reverseName;
+					continue p1_loop;
+				}
+			}
+		}
+		
 	}
 	
 	public void initPerms() {
 		
 		identity =  new StructuredPermL3(new    byte[] {    0,    1,     2,    3,     4,     5,     6,     7},
 			 	 new boolean[] { false, false, false, false, false, false, false, false},
-				0, "");
+				0, "","");
 		initialRotation =  new StructuredPermL3(new    byte[] {    3,    0,     1,    2,     4,     5,     6,     7},
 			 	 new boolean[] { false, false, false, false, false, false, false, false},
-				0, ">");
+				0, ">","");
  
 		
 		StructuredPermL3 p1;
 		p1 = new StructuredPermL3(new    byte[] {    3,    0,     2,    4,     1,     5,     6,     7},
 									 	 new boolean[] { true, true, false, false, false, false, false, false},
-										+1, "+");
+										+1, "+","");
 		perms.add(p1);
 		StructuredPermL3 p2;
 		p2 = new StructuredPermL3(new    byte[] {    1,    4,     2,    0,     3,     5,     6,     7},
 										 new boolean[] { true, false, false, true, false, false, false, false},
-										-1, "-");
+										-1, "-","");
 		perms.add(p2);
 		
 		StructuredPermL3 p3;
 		p3 = new StructuredPermL3(new    byte[]{   4,      3,      2,     1,    0,     5,     6,     7},
 										new boolean[]{ true,  false,  false, false, true, false, false, false},
-										+2, "2");
+										+2, "2","");
 		perms.add(p3);
 
 		StructuredPermL3 q1;
 		q1 = new StructuredPermL3(new    byte[]{    1,     2,     3,     0,     4,     5,     6,     7},
 										new boolean[]{false, false, false, false, false, false, false, false},
-										+1, "(+)");
+										+1, "(+)","");
 		bottomTurns.add(q1);
 
 		StructuredPermL3 q2;
 		q2 = new StructuredPermL3(new    byte[]{   3,     0,     1,    2,     4,     5,     6,     7},
 										new boolean[]{false, false, false, false, false, false, false, false},
-										-1, "(-)");
+										-1, "(-)","");
 		bottomTurns.add(q2);
 		
 		StructuredPermL3 q3;
 		q3 = new StructuredPermL3(new    byte[]{   2,     3,     0,    1,     4,     5,     6,     7},
 										new boolean[]{false, false, false, false, false, false, false, false},
-										+2, "(2)");
+										+2, "(2)","");
 		bottomTurns.add(q3);
 
-		//p1.act(p2.act(State.getInitialState())).test();
+		/*
+		System.out.println("@@@@@@="+match(p1.actInverse(p1.act(State.getInitialState())),State.getInitialState()));
+		System.out.println("@@@@@@="+match(p2.actInverse(p2.act(State.getInitialState())),State.getInitialState()));
+		System.out.println("@@@@@@="+match(p3.actInverse(p3.act(State.getInitialState())),State.getInitialState()));
+		System.out.println("@@@@@@="+match(q1.actInverse(q1.act(State.getInitialState())),State.getInitialState()));
+		System.out.println("@@@@@@="+match(q2.actInverse(q2.act(State.getInitialState())),State.getInitialState()));
+		System.out.println("@@@@@@="+match(q3.actInverse(q3.act(State.getInitialState())),State.getInitialState()));
+		*/ 
 		//p2.act(p1.act(State.getInitialState())).test();
 		//p1.act(q3.act(p2.act(State.getInitialState()))).test();
 		//p2.act(q3.act(p1.act(State.getInitialState()))).test();
 	}
 
+	public boolean match(State s, State s2) {
+		for (int i = 0; i<8; ++i) {
+			if ((s.bottomTurnCount%4)!=0) {
+				//System.out.println("r1 "+s.bottomTurnCount);
+				return false;
+			}
+			if (s.state[i]!=s2.state[i]) {
+				//System.out.println("r2");
+				return false;
+			}
+			if (s.isReverse[i]!= s2.isReverse[i]) {
+				//System.out.println("r3");
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	public boolean match(State s, StructuredPermL3 l) {
 		for (int i = 0; i<8; ++i) {
 			if ((s.bottomTurnCount%4)!=0) return false;
@@ -148,7 +185,7 @@ public class FindSequence {
 					State novo = p.act(s);
 					for(StructuredPermL3 fp :finalPatterns) {
 						if (match(novo,fp)) {
-							System.out.println("found "+fp.name+"="+novo.trace);
+							System.out.println("found "+("".equals(fp.name)?("INV+"+fp.reverseName):fp.name)+"="+novo.trace);
 							found.add(fp);
 						}
 					}
@@ -161,7 +198,7 @@ public class FindSequence {
 	public static void main (String []args) {
 		
 		System.out.println("Achadas:");
-		for (int j=3; j<=10; ++j) {
+		for (int j=3; j<=10 /*10*/; ++j) {
 			found  = new HashSet<StructuredPermL3>();
 			System.out.println("\n Achando seq de tamanho "+j);
 			FindSequence fs = new FindSequence(j);
