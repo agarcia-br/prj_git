@@ -35,7 +35,7 @@ public class FindSequence {
 			// 1/12 
 			/* byte [] r_adj =*/ new    byte[] {    1,    0,     3,    2,     4,     5,     6,     7},
 			// 1/12 
-			/* byte [] l_adj =*/ new    byte[] {    3,    1,     2,    0,     4,     5,     6,     7},
+			/* byte [] l_adj =*/ new    byte[] {    3,    2,     1,    0,     4,     5,     6,     7},
 			// 1/12
 			/* byte [] oposite =*/ new    byte[] {    2,    3,     0,    1,     4,     5,     6,     7},
 			// 1/12 * 4 * 2 = 8/12
@@ -72,7 +72,7 @@ public class FindSequence {
 		identity =  new StructuredPermL3(new    byte[] {    0,    1,     2,    3,     4,     5,     6,     7},
 			 	 new boolean[] { false, false, false, false, false, false, false, false},
 				0, "");
-		initialRotation =  new StructuredPermL3(new    byte[] {    3,    0,     1,    2,     7,     4,     5,     6},
+		initialRotation =  new StructuredPermL3(new    byte[] {    3,    0,     1,    2,     4,     5,     6,     7},
 			 	 new boolean[] { false, false, false, false, false, false, false, false},
 				0, ">");
  
@@ -127,7 +127,16 @@ public class FindSequence {
 		return true;
 	}
 
+
+	public void findBegin(int depth, State s) {
+		find(depth,s);
+		for(StructuredPermL3 p : bottomTurns) {
+			State novo = p.act(s);
+			find(depth,novo);
+		}
+	}
 	
+	static Set<StructuredPermL3> found;
 	public void find(int depth, State s) {
 		if (depth == depthLimit ) {
 			//s.test();
@@ -137,14 +146,12 @@ public class FindSequence {
 				//State novo = identity.act(s);
 				for(StructuredPermL3 p : operations) {
 					State novo = p.act(s);
-					Set<StructuredPermL3> found  = new HashSet<StructuredPermL3>();
 					for(StructuredPermL3 fp :finalPatterns) {
 						if (match(novo,fp)) {
 							System.out.println("found "+fp.name+"="+novo.trace);
 							found.add(fp);
 						}
 					}
-					finalPatterns.removeAll(found);
 					find(depth+1,novo);
 				}
 		}
@@ -155,9 +162,11 @@ public class FindSequence {
 		
 		System.out.println("Achadas:");
 		for (int j=3; j<=10; ++j) {
+			found  = new HashSet<StructuredPermL3>();
 			System.out.println("\n Achando seq de tamanho "+j);
 			FindSequence fs = new FindSequence(j);
-			fs.find(0,State.getInitialState());
+			fs.findBegin(0,State.getInitialState());
+			finalPatterns.removeAll(found);
 		}
 		System.out.println("Nao achadas:");
 		for(StructuredPermL3 fp :finalPatterns) {
