@@ -1,0 +1,263 @@
+<HTML>
+	<HEAD>
+		<TITLE>CONVERT YOUR STRING</TITLE>
+        <META NAME="description" content="String conversion">
+        <META NAME="keywords" content="hex, ascii, asc, asci, base64, string, conversion, translation, translator, convert, character">
+        <link rel="stylesheet" type="text/css" href="/style.css">
+        <META http-equiv="Content-Type" content="text/html">
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <META HTTP-EQUIV="Expires" CONTENT="-1"> 
+	</HEAD>
+
+<script language="JavaScript">
+  
+  function validanibble(nibble) {
+         return ((("A" <= nibble) && (nibble <= "F"))||(("0" <= nibble) && (nibble <= "9")));
+  }
+
+  function hexValue(nibble) {
+         if (("A" <= nibble) && (nibble <= "F")) {
+            return 0x0A + nibble.charCodeAt(0) - "A".charCodeAt(0);
+         } else {
+            return nibble.charCodeAt(0) - "0".charCodeAt(0);
+         }
+  }
+
+  function hexValue2(nibble1, nibble2) {
+        return 16*hexValue(nibble1)+hexValue(nibble2);
+  }
+
+  var _URL_SAFE_ALPHABET = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                             'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'  ];
+
+  var nibble2char = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"];
+  
+  function isPrint(value) {
+        return (0x20 <= value) && (value <= 0x7A) && (0x25 != value);
+  }
+  
+  function base64value(c) {
+     if (( "A"<= c)&&(c<="Z")) {
+        return c.charCodeAt(0) - "A".charCodeAt(0);
+     } else if (( "a"<= c)&&(c<="z")) {
+        return c.charCodeAt(0) - "a".charCodeAt(0) + 26;
+     } else if (( "0"<= c)&&(c<="9")) {
+        return c.charCodeAt(0) - "0".charCodeAt(0) + 52;
+     } else if (( "-" == c) || ("+" == c)) {
+        return 62;
+     } else if (( "_" == c) || "/" == c) {
+        return 63;
+     } else if ("=" == c) {
+        return 0; // FILLER
+     }
+  }
+  
+/* -- NOTE ON BASE64 CALCULATION IN FUNCTION hhex2asc()
+HEX    | charAt(i+0) | charAt(i+1) | charAt(i+2) | charAt(i+3) | charAt(i+4) | charAt(i+5) | Each char 1 nibble (4 bits)
+Base64 |     value0       |       value1         |       value2       |       value3       |  Each value 6 bits
+
+Example:
+
+HEX    |  A    |   3   |  C   |  1    |  0    |  7   | 
+BINARY | 1010  | 00 11 | 1100 | 0001  | 00 00 | 0111 | 
+Base64 |     o    |     8     |      E    |    H     | 
+*/
+
+  function base64tohex(a) {
+    var value1, value2;
+    d = "";
+    for (i=0; i < a.length ; i+=4) {
+        value1 = (base64value(a.charAt(i+0))<<6)+base64value(a.charAt(i+1));
+        nibble3 = value1 % 16;
+        nibble2 = (value1>>4)%16;
+        nibble1 = (value1>>8)%16;
+        value2 = (base64value(a.charAt(i+2))<<6)+base64value(a.charAt(i+3));
+        nibble6 = value2 % 16;
+        nibble5 = (value2>>4)%16;
+        nibble4 = (value2>>8)%16;
+        
+        d = d + nibble2char[nibble1] + nibble2char[nibble2];
+        if ( "=" != a.charAt(i+2)) {
+            d = d + nibble2char[nibble3] + nibble2char[nibble4];
+            if ( "=" != a.charAt(i+3)) {
+                d = d + nibble2char[nibble5] + nibble2char[nibble6];
+            }
+        }
+    }
+    return  d;
+  }
+  
+
+  function hex2base64(a)
+  {
+    var d, i, nibble1, nibble2, char0, char1, char2, char3, value0, value1, value2, value3;
+    a = a.replace(/\s/g, ""); // rip spaces
+    a = a.replace(/\t/g, ""); // rip tabs
+    if (1 == (a.length % 2)) {
+        alert("Invalid Hex string size");
+        return;
+    }
+    
+    d = "";
+    for (i=0; i < a.length ; i+=6) {
+        char2 = '=';
+        char3 = '=';
+
+        value0 = (hexValue(a.charAt(i+0))<<2) + (hexValue(a.charAt(i+1))>>2);
+        char0 = _URL_SAFE_ALPHABET[value0];   
+        
+        value1 = ( (0x03 & hexValue(a.charAt(i+1)))<<4);
+
+        if(i+3 <= a.length) {
+            value1 += hexValue(a.charAt(i+2));
+            value2 = (hexValue(a.charAt(i+3))<<2);
+    
+            if(i+5 <= a.length) {
+                value2 += (hexValue(a.charAt(i+4))>>2);
+                value3 = ((0x03 & hexValue(a.charAt(i+4)))<<4) + hexValue(a.charAt(i+5));
+                char3  = _URL_SAFE_ALPHABET[value3];   
+            }
+            char2 = _URL_SAFE_ALPHABET[value2];   
+
+        }
+        char1 = _URL_SAFE_ALPHABET[value1];   
+        d = d+ char0+ char1 + char2+ char3;
+    }
+    return  d ;
+  }
+
+  function ascPuro2hex(ascValue)
+  {
+    var a, b, i, aux, nibble1, nibble2;
+    a = ascValue;
+    b = "";
+    for (i=0; i < a.length ; ++i) {
+        aux = a.charCodeAt(i);
+        nibble2 = aux % 16;
+        nibble1 = (aux-nibble2)/16;
+        b = b + nibble2char[nibble1]+ nibble2char[nibble2];
+    }
+    return b;
+  }
+
+  function asc2hex(escapedAscValue)
+  {
+    var a, b, i, aux, nibble1, nibble2;
+    a = unescape(escapedAscValue);
+    b = "";
+    for (i=0; i < a.length ; ++i) {
+        aux = a.charCodeAt(i);
+        nibble2 = aux % 16;
+        nibble1 = (aux-nibble2)/16;
+        b = b + nibble2char[nibble1]+ nibble2char[nibble2];
+    }
+    return b;
+  }
+
+  function hex2ascEncoded(hexValue) {
+    var a, b, i, nibble1, nibble2;
+    a = hexValue.toUpperCase();
+    a = a.replace(/\s/g, ""); // rip spaces
+    a = a.replace(/\t/g, ""); // rip tabs
+    if (1 == (a.length % 2)) {
+        alert("Invalid Hex string size");
+        return;
+    }
+    b = "";
+    for (i=0; i < (a.length/2) ; ++i) {
+        nibble1 = a.charAt(i*2);
+        nibble2 = a.charAt(i*2+1);
+        if (!validanibble(nibble1) || ! validanibble(nibble2)) {
+            alert("Invalid char in Hex representation.");
+            return;
+        }
+        value = hexValue2(nibble1, nibble2);
+        if (isPrint(value)) {
+            b = b + String.fromCharCode(value);
+        } else {
+            b = b + "%"+nibble1+nibble2;
+        }
+    }
+    return b;    
+  }
+   
+  
+  function hex2asc(hexValue) {
+    var a, b, i, nibble1, nibble2;
+    a = hexValue.toUpperCase();
+    a = a.replace(/\s/g, ""); // rip spaces
+    a = a.replace(/\t/g, ""); // rip tabs
+    if (1 == (a.length % 2)) {
+        alert("Invalid Hex string size");
+        return;
+    }
+    b = "";
+    for (i=0; i < (a.length/2) ; ++i) {
+        nibble1 = a.charAt(i*2);
+        nibble2 = a.charAt(i*2+1);
+        if (!validanibble(nibble1) || ! validanibble(nibble2)) {
+            alert("Invalid char in Hex representation.");
+            return;
+        }
+        value = hexValue2(nibble1, nibble2);
+        b = b + String.fromCharCode(value);
+    }
+    return b;    
+  }
+    
+  function fclear()
+  {
+    document.completeForm.base64.value = "";
+    document.completeForm.hex.value = "";
+    document.completeForm.asc.value = "";
+    document.completeForm.ascescaped.value = "";
+    document.completeForm.ascencoded.value = "";
+  }
+
+  function fconvert()
+  {
+    if ( document.completeForm.base64.value != "") {
+        document.completeForm.hex.value = base64tohex(document.completeForm.base64.value);
+    } else if (document.completeForm.asc.value != "") {
+        document.completeForm.hex.value = ascPuro2hex(document.completeForm.asc.value);
+    } else if (document.completeForm.ascescaped.value != "") {
+        document.completeForm.hex.value = asc2hex(document.completeForm.ascescaped.value);
+    } else if (document.completeForm.ascencoded.value != "") {
+        document.completeForm.hex.value = asc2hex(document.completeForm.ascencoded.value);
+    } else {
+    // ja tenho o hex
+    }
+    a = document.completeForm.hex.value.toUpperCase();
+    a = a.replace(/\s/g, ""); // rip spaces
+    a = a.replace(/\t/g, ""); // rip tabs
+
+    /* Um deles vai ser convertido de volta -- mas ok - cod mais simples */
+    document.completeForm.asc.value =  hex2asc(document.completeForm.hex.value);
+    document.completeForm.ascencoded.value =  hex2ascEncoded(document.completeForm.hex.value);
+    document.completeForm.ascescaped.value = escape(document.completeForm.asc.value);
+    document.completeForm.base64.value = hex2base64(document.completeForm.hex.value);
+  }
+
+	</script>
+	<BODY>
+         
+         If you need to convert a string representation fell free to use this page or copy its code. Either way with no warranty of correctness or of any kind at all.
+        <HR>
+            Form
+        <HR>
+        <form name="completeForm">
+            <table  border="0">
+            <tr><td>Base64</td><td><input name="base64" size="256" /> </td></tr>
+            <tr><td>Hex</td><td><input name="hex" size="256" value=""  /></td></tr>
+            <tr><td>Ascii</td><td><input name="asc" size="256"  /> </td></tr>
+            <tr><td>Ascii Escaped</td><td><input name="ascescaped" size="256" /> </td></tr>
+            <tr><td>Ascii Log Encoded</td><td><input name="ascencoded" size="256" /> </td></tr>
+            </table>
+            <input name="b8" type="button" value="Convert"  onclick="JavaScript:fconvert()" />
+            <input name="b8" type="button" value="Clear"      onclick="JavaScript:fclear()" />
+        </form>
+        <HR>
+
+        </BODY>
+</HTML>

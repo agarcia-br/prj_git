@@ -1,0 +1,473 @@
+<HTML>
+	<HEAD>
+		<TITLE>CONVERT YOUR ISO 8583 MESSAGE</TITLE>
+        <META NAME="description" content="Message conversion">
+        <META NAME="keywords" content="iso,transaction,iso8583,hex, ascii, asc, asci, base64, string, conversion, translation, translator, convert, character">
+        <link rel="stylesheet" type="text/css" href="/style.css">
+        <META http-equiv="Content-Type" content="text/html">
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <META HTTP-EQUIV="Expires" CONTENT="-1"> 
+	</HEAD>
+
+<applet code="SockApplet.class" mayscript="true" name="sockapplet"  width=50 height=30>
+</applet> 
+
+<script language="JavaScript">
+  
+  function validanibble(nibble) {
+         return ((("A" <= nibble) && (nibble <= "F"))||(("0" <= nibble) && (nibble <= "9")));
+  }
+
+  function hexValue(nibble) {
+         if (("A" <= nibble) && (nibble <= "F")) {
+            return 0x0A + nibble.charCodeAt(0) - "A".charCodeAt(0);
+         } else {
+            return nibble.charCodeAt(0) - "0".charCodeAt(0);
+         }
+  }
+
+  function hexValue2(nibble1, nibble2) {
+        return 16*hexValue(nibble1)+hexValue(nibble2);
+  }
+
+  var _URL_SAFE_ALPHABET = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                             'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'  ];
+
+  var nibble2char = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"];
+  
+  function isPrint(value) {
+        return (0x20 <= value) && (value <= 0x7A) && (0x25 != value);
+  }
+  
+  function asc2hex(escapedAscValue)
+  {
+    var a, b, i, aux, nibble1, nibble2;
+    a = unescape(escapedAscValue);
+    b = "";
+    for (i=0; i < a.length ; ++i) {
+        aux = a.charCodeAt(i);
+        nibble2 = aux % 16;
+        nibble1 = (aux-nibble2)/16;
+        b = b + nibble2char[nibble1]+ nibble2char[nibble2];
+    }
+    return b;
+  }
+  
+function hex2asc(hexValue) {
+    var a, b, i, nibble1, nibble2;
+    a = hexValue.toUpperCase();
+    a = a.replace(/\s/g, ""); // rip spaces
+    a = a.replace(/\t/g, ""); // rip tabs
+    if (1 == (a.length % 2)) {
+        alert("Invalid Hex string size");
+        return;
+    }
+    b = "";
+    for (i=0; i < (a.length/2) ; ++i) {
+        nibble1 = a.charAt(i*2);
+        nibble2 = a.charAt(i*2+1);
+        if (!validanibble(nibble1) || ! validanibble(nibble2)) {
+            alert("Invalid char in Hex representation.");
+            return;
+        }
+        value = hexValue2(nibble1, nibble2);
+        b = b + String.fromCharCode(value);
+    }
+    return b;    
+  }
+    
+  function createElementFromString(text) {
+        if (window.DOMParser) {
+            parser=new DOMParser();
+            xmlDoc=parser.parseFromString(text,"text/xml");
+        }  else { //IE
+            xmlDoc=new ActiveXObject("Microsoft.XMLDOM");
+            xmlDoc.async=false;
+            xmlDoc.loadXML(text); 
+        }        
+       return xmlDoc;
+    }
+
+    function createField(field,value) {
+        elem = document.createElement('tr');
+        elem.innerHTML = "<td>Field "+field+"</td>"+
+                "<td>Value:</td>"+
+                "<td><input name=\"f"+field+"\" value=\""+value+"\" size=\""+value.length+"\"/></td>";
+        table = document.getElementsByTagName("table")[1];
+        table.appendChild(elem);
+    }
+    
+    function drawField(msg,packager,field){
+        //Create the function
+        var valuefn, value;
+        if (undefined == packager[field]) return;
+        valuefn = window["value"+packager[field].field_type];
+        //Call the function
+        value = valuefn(msg,field);
+        createField(field,value);
+    }
+    
+    function unpackIFA_NUMERIC(msg,packager,field) {
+        var size = packager[field].user_size;
+        msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+        msg.unpackpos += 2*size;
+    }
+
+    function valueIFA_NUMERIC(msg,field) {
+        return hex2asc(msg["f"+field]) ;
+    }
+
+    function unpackIFB_NUMERIC(msg,packager,field) {
+        var size = packager[field].user_size;
+        msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,size);
+        msg.unpackpos += size;
+    }
+
+    function valueIFB_NUMERIC(msg,field) {
+        return msg["f"+field]; // keep in hex
+    }
+
+    function unpackIF_CHAR(msg,packager,field) {
+        var size = packager[field].user_size;
+        msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+        msg.unpackpos += 2*size;
+    }
+
+    function valueIF_CHAR(msg,field) {
+        return hex2asc(msg["f"+field]);
+    }
+
+    function unpackIFA_LLLCHAR(msg,packager,field) {
+        var size, sizeLLL;
+        sizeLLL = hex2asc(msg.hexmsg.substr(msg.unpackpos,2*3));
+        msg.unpackpos += 2*3;
+        size = parseInt(sizeLLL,10);
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFA_LLLCHAR(msg,field) {
+        return hex2asc(msg["f"+field]);
+    }
+
+    function unpackIFB_LLHEX(msg,packager,field) {
+        var size, sizeLL;
+        sizeLL = msg.hexmsg.substr(msg.unpackpos,2*1);
+        msg.unpackpos += 2*1;
+        size = parseInt(sizeLL,10);
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFB_LLHEX(msg,field) {
+        return msg["f"+field]; // keep in HEX
+    }
+
+   function unpackIFB_LLCHAR(msg,packager,field) {
+        var size, sizeLL;
+        sizeLL = msg.hexmsg.substr(msg.unpackpos,2*1);
+        msg.unpackpos += 2*1;
+        size = parseInt(sizeLL,10);
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFB_LLCHAR(msg,field) {
+        return msg["f"+field]; // keep in HEX
+    }
+
+   function unpackIFB_LLBINARY(msg,packager,field) {
+        var size, sizeLL;
+        sizeLL = msg.hexmsg.substr(msg.unpackpos,2*1);
+        msg.unpackpos += 2*1;
+        size = parseInt(sizeLL,10);
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFB_LLBINARY(msg,field) {
+        return msg["f"+field]; // keep in HEX
+    }
+//
+    function unpackIFB_LLLHEX(msg,packager,field) {
+        var size, sizeLL;
+        sizeLL = msg.hexmsg.substr(msg.unpackpos,2*2);
+        msg.unpackpos += 2*2;
+        size = parseInt(sizeLL,10);
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFB_LLLHEX(msg,field) {
+        return msg["f"+field]; // keep in HEX
+    }
+
+   function unpackIFB_LLLCHAR(msg,packager,field) {
+        var size, sizeLL;
+        sizeLL = msg.hexmsg.substr(msg.unpackpos,2*2);
+        msg.unpackpos += 2*2;
+        size = parseInt(sizeLL,10);
+alert("size="+size);        
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFB_LLLCHAR(msg,field) {
+        return msg["f"+field]; // keep in HEX
+    }
+
+   function unpackIFB_LLLBINARY(msg,packager,field) {
+        var size, sizeLL;
+        sizeLL = msg.hexmsg.substr(msg.unpackpos,2*2);
+        msg.unpackpos += 2*2;
+        size = parseInt(sizeLL,10);
+        if (size>0) {
+            msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] = "";
+        }
+    }
+
+    function valueIFB_LLLBINARY(msg,field) {
+        return msg["f"+field]; // keep in HEX
+    }
+// ->
+
+    function unpackIFA_BITMAP(msg,packager,field) {
+        var size = 16; //packager[field].user_size;
+        msg["f"+field] = hex2asc(msg.hexmsg.substr(msg.unpackpos,2*size));
+        // efeito colateral setar bitmap global
+        msg.unpackpos += 2*size;
+        if ( hasField(msg,1) ) {
+            msg["f"+field] += hex2asc(msg.hexmsg.substr(msg.unpackpos,2*size));
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] += "00000000";
+        }
+    }
+    
+    function valueIFA_BITMAP(msg,field) {
+        return msg["f"+field]; // keep in hex
+    }
+    
+   function unpackIFB_BITMAP(msg,packager,field) {
+        var size = 8; //packager[field].user_size;
+        msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
+        // efeito colateral setar bitmap global
+        msg.unpackpos += 2*size;
+        if ( hasField(msg,1) ) {
+            msg["f"+field] += msg.hexmsg.substr(msg.unpackpos,2*size);
+            msg.unpackpos += 2*size;
+        } else {
+            msg["f"+field] += "00000000";
+        }
+    }
+    
+    function valueIFB_BITMAP(msg,field) {
+        return msg["f"+field]; // keep in hex
+    }
+  
+    function hasField(msg,field) {
+        var mybyte;
+        if (0==field) return true;
+        field--;
+        mynibble = (field - (field%4))/4;
+        myvalue = hexValue(msg["f1"].charAt(mynibble));
+        return (myvalue & (1<<(3-(field%4))))!=0;
+    }
+
+
+    function unpackField(msg,packager,field) {
+        //Create the function
+        var unpackfn;
+        if (undefined == packager[field]) return;
+        unpackfn = window["unpack"+packager[field].field_type];
+        //Call the function
+        unpackfn(msg,packager,field);
+alert ("msg[f"+field+"]="+msg["f"+field]);
+    }
+    
+    function unpack(packager,msg) {
+        msg.unpackpos=0;
+        unpackField(msg,packager,0);
+        drawField(msg,packager,0);
+        unpackField(msg,packager,1);
+        drawField(msg,packager,1);
+        alert ("msg.unpackpos="+msg.unpackpos);
+        alert ("msg[\"f0\"]="+msg["f0"]);
+        
+        for (i = 2; i<128;++i) {
+            if( hasField(msg,i)) {
+                unpackField(msg,packager,i);
+                drawField(msg,packager,i);
+            }
+        }
+        //unpackField(msg,1);
+        // efeito colateral setar bitmap global
+    }
+
+    function packegerVNS() {
+        var packager = [];
+            packager[0]   = { 'field_type':"IFB_NUMERIC",  'user_size':4};   
+            packager[1]   = { 'field_type':"IFB_BITMAP",   'user_size':16};  
+            packager[2]   = { 'field_type':"IFB_LLHEX",   'user_size':99}; 
+            packager[3]   = { 'field_type':"IFB_NUMERIC",  'user_size':6}; 
+            packager[4]   = { 'field_type':"IFB_NUMERIC",  'user_size':12}; 
+            packager[11]  = { 'field_type':"IFB_NUMERIC",  'user_size':6}; 
+            packager[12]  = { 'field_type':"IFB_NUMERIC",  'user_size':12}; 
+            packager[14]  = { 'field_type':"IFB_NUMERIC",  'user_size':4}; 
+            packager[18]  = { 'field_type':"IFB_NUMERIC",  'user_size': 4}; 
+            packager[22]   = { 'field_type':"IFB_NUMERIC",  'user_size':12}; 
+            packager[23]   = { 'field_type':"IFB_NUMERIC",  'user_size':2}; 
+            packager[24]   = { 'field_type':"IFB_NUMERIC",  'user_size':4}; 
+            packager[34]   = { 'field_type':"IFB_LLCHAR",   'user_size':99}; 
+            packager[35]   = { 'field_type':"IFB_LLHEX",   'user_size':99}; 
+            packager[38]   = { 'field_type':"IF_CHAR",   'user_size':6}; 
+            packager[39]   = { 'field_type':"IF_CHAR",   'user_size':3}; 
+            packager[41]   = { 'field_type':"IF_CHAR",   'user_size':8}; 
+            packager[42]   = { 'field_type':"IFB_NUMERIC",  'user_size':16}; 
+            packager[43]   = { 'field_type':"IFB_LLHEX",   'user_size':99}; 
+            packager[45]   = { 'field_type':"IFB_LLHEX",   'user_size':99}; 
+            packager[47]   = { 'field_type':"IFB_LLLBINARY",   'user_size':999}; 
+            packager[49]   = { 'field_type':"IFB_NUMERIC",  'user_size':4};   
+            packager[52]   = { 'field_type':"IF_HEX",   'user_size':8}; 
+            packager[53]   = { 'field_type':"IFB_LLHEX",   'user_size':99}; 
+            packager[54]   = { 'field_type':"IFB_LLLHEX",   'user_size':999}; 
+            packager[55]   = { 'field_type':"IFB_LLLBINARY",   'user_size':999}; 
+            packager[57]   = { 'field_type':"IFB_LLLBINARY",   'user_size':999}; 
+            packager[58]   = { 'field_type':"IFB_LLLCHAR",   'user_size':999}; 
+            packager[59]   = { 'field_type':"IFB_LLLCHAR",   'user_size':999}; 
+            packager[60]   = { 'field_type':"IFB_LLLBINARY",   'user_size':999}; 
+            packager[61]   = { 'field_type':"IFB_LLLCHAR",   'user_size':999}; 
+            packager[62]   = { 'field_type':"IFB_LLLBINARY",   'user_size':999}; 
+            packager[63]   = { 'field_type':"IFB_LLLBINARY",   'user_size':999}; 
+            packager[64]   = { 'field_type':"IF_HEX",   'user_size':8}; 
+
+        return packager;
+    }
+
+    function packegerIP() {
+        var packager = [];
+            packager[0]   = { 'field_type':"IFA_NUMERIC",  'user_size':4};   //0=IFA_NUMERIC;4 
+            packager[1]   = { 'field_type':"IFA_BITMAP",   'user_size':32};   //1=IFA_BITMAP;32
+            packager[3]   = { 'field_type':"IFA_NUMERIC",  'user_size':6};   //3=IFA_NUMERIC;6
+            packager[7]   = { 'field_type':"IFA_NUMERIC",  'user_size':10};  //7=IFA_NUMERIC;10
+            packager[11]  = { 'field_type':"IFA_NUMERIC",  'user_size':6};  //11=IFA_NUMERIC;6
+            packager[12]  = { 'field_type':"IFA_NUMERIC",  'user_size':6};  //12=IFA_NUMERIC;6
+            packager[13]  = { 'field_type':"IFA_NUMERIC",  'user_size':4};  //13=IFA_NUMERIC;4
+            packager[39]  = { 'field_type':"IFA_NUMERIC",  'user_size':2};  //39=IFA_NUMERIC;2
+            packager[41]  = { 'field_type':"IF_CHAR",      'user_size':8};  //41=IF_CHAR;8
+            packager[42]  = { 'field_type':"IF_CHAR",      'user_size':15}; //42=IF_CHAR;15
+            packager[48]  = { 'field_type':"IFA_LLLCHAR",  'user_size':999};//48=IFA_LLLCHAR;999
+            packager[52]  = { 'field_type':"IF_CHAR",      'user_size':16}; //52=IF_CHAR;16
+            packager[61]  = { 'field_type':"IFA_LLLCHAR",  'user_size':999}; //61=IFA_LLLCHAR;999
+            packager[62]  = { 'field_type':"IFA_LLLCHAR",  'user_size':999}; //62=IFA_LLLCHAR;999
+            packager[63]  = { 'field_type':"IFA_LLLCHAR",  'user_size':999}; //63=IFA_LLLCHAR;999
+            packager[90]  = { 'field_type':"IFA_NUMERIC",  'user_size':42}; //90=IFA_NUMERIC;42
+            packager[125] = { 'field_type':"IFA_LLLCHAR",  'user_size':999}; //125=IFA_LLLCHAR;999
+            packager[127] = { 'field_type':"IFA_LLLCHAR",  'user_size':999}; //127=IFA_LLLCHAR;999
+        
+        return packager;
+    }
+
+    function unpackMessage() {
+        var packager, spack, msg = [];
+        spack = isoform.pack.options[isoform.pack.selectedIndex].value
+alert("spack="+spack);        
+        if ("IP" == spack )
+        { 
+            packager = packegerIP();
+        } else {
+            packager = packegerVNS();
+        }
+
+        msg.hexmsg = isoform.msghex.value.toUpperCase();    
+        if ("" == msg.hexmsg) {
+            isoform.msghex.value = asc2hex(isoform.msgasc.value);
+            msg.hexmsg = isoform.msghex.value;
+        } else {
+            msg.hexmsg = msg.hexmsg.replace(/\s/g, ""); // rip spaces
+            msg.hexmsg = msg.hexmsg.replace(/\t/g, ""); // rip tabs
+            //isoform.msgasc.value = hex2ascEscaped(isoform.msghex.value)
+        }
+        
+        /* Clear Second Table */
+        table = document.getElementsByTagName("table")[1];
+        table.innerHTML = "";
+
+        /* Unpack and write fields to second table */
+        unpack(packager,msg);
+    }    
+
+    function send() {
+alert("ZERO");        
+        isoform.msghex.value = "";
+        isoform.msgasc.value = "";
+alert("UM");        
+        sockapplet.setIp(out.ip.value);
+alert("DOIS");        
+        sockapplet.setPort(out.port.value);
+alert("TRES");        
+        sockapplet.sendMessage(out.outmsghex.value);
+alert("QUATRO");        
+        isoform.msghex.value = sockapplet.getResp();
+    }
+
+	</script>
+	<BODY>
+         ISO 8583 is a standard that defines a general format of a message, it does not fully determines the format of a message, unless you define the format of each individual field.
+         Define the format of each field.
+        <HR>
+        <HR>
+        <form name="isoform">
+             Message Hex:<input name="msghex"  size="1030" value="" /><br/>
+             Message Asc:<input name="msgasc"  size="1030" value="0210A238000002C00004000000000000000200202104261643030000081643030426002000000000000000008391714611#11182932746#1000#2000#200#1#01#01#01#123456#S##000000000100#0#1#Deseja Resgatar um Cheddarbuger por R$1,00 e 20 KM?#MENSAGEM PARA O COMPROVANTE006000010" ><br/>
+            <table  border="0">
+            <tr><td>Channel size encoding</td><td><select name="field0"><option>ASC<!--ASC_CHANNEL--></option><option>BCD<!--NCC_CHANNEL--></option><option>SHORT<!--NAC_CHANNEL--></option><option>LONG<!--RAW_CHANNEL--></option><option>NONE<!--SDLC_CHANNEL--></option></select></td><td></td><td></td></tr>
+            <tr><td>TPDU Size in bytes</td><td><input name="asc" size="02" value = "0"/> </td><td></td><td></td></tr>
+            <tr><td>Packager</td><td><select name="pack"><option>IP</option><option>VNS</option></select><td>Size</td><td><input name="size0" value="4" size="3" disabled /></td><td></td><td></td></tr>
+            </table>
+            <HR>
+            <table  border="0">
+            </table>
+            <input name="b8" type="button" value="Unpack"  onclick="JavaScript:unpackMessage()" />
+        </form>
+        <HR>
+        <form name="out">
+             IP:<input name="ip"  size="12" value="127.0.0.1" /><br/>
+             Port:<input name="port"  size="4" value="851" /><br/>
+             Outgoing Message Hex:<input name="outmsghex"  size="1030" value="08002030000000C00020600031014499120703171028313030303030303000100002444700010012636F6E666964656E6369616C" /><br/>
+            <input name="b8" type="button" value="Send"  onclick="JavaScript:send()" />
+        </form>
+        </BODY>
+</HTML>
+
+
+
+
