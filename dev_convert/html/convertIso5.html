@@ -228,7 +228,7 @@ function hex2asc(hexValue) {
         sizeLL = msg.hexmsg.substr(msg.unpackpos,2*2);
         msg.unpackpos += 2*2;
         size = parseInt(sizeLL,10);
-alert("size="+size);        
+//alert("size="+size);        
         if (size>0) {
             msg["f"+field] = msg.hexmsg.substr(msg.unpackpos,2*size);
             msg.unpackpos += 2*size;
@@ -310,7 +310,7 @@ alert("size="+size);
         unpackfn = window["unpack"+packager[field].field_type];
         //Call the function
         unpackfn(msg,packager,field);
-alert ("msg[f"+field+"]="+msg["f"+field]);
+//alert ("msg[f"+field+"]="+msg["f"+field]);
     }
     
     function unpack(packager,msg) {
@@ -319,8 +319,8 @@ alert ("msg[f"+field+"]="+msg["f"+field]);
         drawField(msg,packager,0);
         unpackField(msg,packager,1);
         drawField(msg,packager,1);
-        alert ("msg.unpackpos="+msg.unpackpos);
-        alert ("msg[\"f0\"]="+msg["f0"]);
+        //alert ("msg.unpackpos="+msg.unpackpos);
+        //alert ("msg[\"f0\"]="+msg["f0"]);
         
         for (i = 2; i<128;++i) {
             if( hasField(msg,i)) {
@@ -399,7 +399,7 @@ alert ("msg[f"+field+"]="+msg["f"+field]);
     function unpackMessage() {
         var packager, spack, msg = [];
         spack = isoform.pack.options[isoform.pack.selectedIndex].value
-alert("spack="+spack);        
+//alert("spack="+spack);        
         if ("IP" == spack )
         { 
             packager = packegerIP();
